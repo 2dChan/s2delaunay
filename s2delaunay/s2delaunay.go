@@ -64,7 +64,7 @@ func (dt *DelaunayTriangulation) IncidentTriangles(vIdx int) ([]int, error) {
 
 func (dt *DelaunayTriangulation) TriangleVertices(tIdx int) ([3]s2.Point, error) {
 	if tIdx < 0 || tIdx >= len(dt.Triangles) {
-		return [3]s2.Point{}, errors.New("TriangleVertices: tIdx %d out of bounds")
+		return [3]s2.Point{}, errors.New("TriangleVertices: tIdx out of bounds")
 	}
 	t := dt.Triangles[tIdx]
 	return [3]s2.Point{dt.Vertices[t.V[0]], dt.Vertices[t.V[1]], dt.Vertices[t.V[2]]}, nil
