@@ -88,7 +88,7 @@ func (c Cell) Site() s2.Point {
 }
 
 func (c Cell) NumVertices() int {
-	return int(c.vd.CellOffsets[c.idx+1] - c.vd.CellOffsets[c.idx])
+	return c.vd.CellOffsets[c.idx+1] - c.vd.CellOffsets[c.idx]
 }
 
 func (c Cell) VertexIndices() []int {
@@ -100,7 +100,7 @@ func (c Cell) Vertex(i int) s2.Point {
 }
 
 func (c Cell) NumNeighbors() int {
-	return int(c.vd.CellOffsets[c.idx+1] - c.vd.CellOffsets[c.idx])
+	return c.vd.CellOffsets[c.idx+1] - c.vd.CellOffsets[c.idx]
 }
 
 func (c Cell) NeighborIndices() []int {
