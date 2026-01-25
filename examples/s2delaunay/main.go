@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/2dChan/s2voronoi/s2delaunay"
@@ -92,7 +93,8 @@ func main() {
 	points := utils.GenerateRandomPoints(100, 0)
 	dt, err := s2delaunay.ComputeDelaunayTriangulation(points, 0)
 	if err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	renderDelaunayTriangulation(dt)
