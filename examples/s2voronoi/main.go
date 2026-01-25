@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/2dChan/s2voronoi"
@@ -95,7 +96,8 @@ func main() {
 	points := utils.GenerateRandomPoints(1000, 0)
 	vd, err := s2voronoi.ComputeVoronoiDiagram(points, 0)
 	if err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	renderVoronoiDiagram(vd)
