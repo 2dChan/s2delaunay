@@ -17,11 +17,78 @@ const (
 )
 
 type Triangulation struct {
-	Vertices  s2.PointVector
-	Triangles [][3]int
-	// NOTE: Sort in CCW per vertex(look out of sphere)
+	Vertices                s2.PointVector
+	Triangles               [][3]int
 	IncidentTriangleIndices []int
 	IncidentTriangleOffsets []int
+}
+
+type TriangulationOptions struct {
+	Eps float64
+}
+
+type TriangulationOption func(*TriangulationOptions)
+
+func WithEps(eps float64) TriangulationOption {
+	if eps <= 0 {
+		panic("WithEps: eps must be non-negative")
+	}
+	return func(o *TriangulationOptions) {
+		o.Eps = eps
+	}
+}
+
+func NewTriangulation(vertices s2.PointVector, setters ...TriangulationOption) (*Triangulation,
+	error) {
+	opts := TriangulationOptions{
+		Eps: defaultEps,
+	}
+	for _, set := range setters {
+		set(&opts)
+	}
+	numVertices := len(vertices)
+	if numVertices < 4 {
+		return nil, errors.New("s2delaunay: insufficient vertices for triangulation (minimum 4 required)")
+	}
+	numTriangles := 2 * (numVertices - 2)
+	t := &Triangulation{
+		Vertices:                vertices,
+		Triangles:               make([][3]int, numTriangles),
+		IncidentTriangleIndices: make([]int, numTriangles*3),
+		IncidentTriangleOffsets: make([]int, numVertices+1),
+	}
+	r3vertices := make([]r3.Vector, numVertices)
+	for i, p := range vertices {
+		r3vertices[i] = p.Vector
+	}
+	qh := new(quickhull.QuickHull)
+	ch := qh.ConvexHull(r3vertices, true, true, opts.Eps)
+	if len(ch.Indices) != numTriangles*3 {
+		return nil, errors.New("s2delaunay: inconsistent number of indices returned from QuickHull")
+	}
+	for _, idx := range ch.Indices {
+		t.IncidentTriangleOffsets[idx+1]++
+	}
+	for i := range numVertices {
+		t.IncidentTriangleOffsets[i+1] += t.IncidentTriangleOffsets[i]
+	}
+	nxt := make([]int, numVertices)
+	copy(nxt, t.IncidentTriangleOffsets[:numVertices])
+	for i := range numTriangles {
+		base := i * 3
+		for j := range 3 {
+			v := ch.Indices[base+j]
+			t.Triangles[i][j] = v
+			t.IncidentTriangleIndices[nxt[v]] = i
+			nxt[v]++
+		}
+		sortTriangleVerticesCCW(&t.Triangles[i], t.Vertices)
+	}
+	for i := range numVertices {
+		incidentTriangles := t.IncidentTriangles(i)
+		sortIncidentTriangleIndicesCCW(i, incidentTriangles, t.Triangles)
+	}
+	return t, nil
 }
 
 func (t *Triangulation) IncidentTriangles(vIdx int) []int {
@@ -39,82 +106,6 @@ func (t *Triangulation) TriangleVertices(tIdx int) (s2.Point, s2.Point, s2.Point
 	}
 	tri := t.Triangles[tIdx]
 	return t.Vertices[tri[0]], t.Vertices[tri[1]], t.Vertices[tri[2]]
-}
-
-type TriangulationOptions struct {
-	Eps float64
-}
-
-type TriangulationOption func(*TriangulationOptions)
-
-func WithEps(eps float64) TriangulationOption {
-	if eps <= 0 {
-		panic("WithEps: eps must be non-negative")
-	}
-
-	return func(o *TriangulationOptions) {
-		o.Eps = eps
-	}
-}
-
-// NOTE: All vertices must lie on a sphere.
-func NewTriangulation(vertices s2.PointVector, setters ...TriangulationOption) (*Triangulation, error) {
-	opts := TriangulationOptions{
-		Eps: defaultEps,
-	}
-	for _, set := range setters {
-		set(&opts)
-	}
-
-	numVertices := len(vertices)
-	if numVertices < 4 {
-		return nil,
-			errors.New("s2delaunay: insufficient vertices for triangulation (minimum 4 required)")
-	}
-	numTriangles := 2 * (numVertices - 2)
-	t := &Triangulation{
-		Vertices:                vertices,
-		Triangles:               make([][3]int, numTriangles),
-		IncidentTriangleIndices: make([]int, numTriangles*3),
-		IncidentTriangleOffsets: make([]int, numVertices+1),
-	}
-
-	r3vertices := make([]r3.Vector, numVertices)
-	for i, p := range vertices {
-		r3vertices[i] = p.Vector
-	}
-	qh := new(quickhull.QuickHull)
-	ch := qh.ConvexHull(r3vertices, true, true, opts.Eps)
-	if len(ch.Indices) != numTriangles*3 {
-		return nil, errors.New("s2delaunay: inconsistent number of indices returned from QuickHull")
-	}
-
-	for _, idx := range ch.Indices {
-		t.IncidentTriangleOffsets[idx+1]++
-	}
-	for i := range numVertices {
-		t.IncidentTriangleOffsets[i+1] += t.IncidentTriangleOffsets[i]
-	}
-
-	nxt := make([]int, numVertices)
-	copy(nxt, t.IncidentTriangleOffsets[:numVertices])
-	for i := range numTriangles {
-		base := i * 3
-		for j := range 3 {
-			v := ch.Indices[base+j]
-			t.Triangles[i][j] = v
-			t.IncidentTriangleIndices[nxt[v]] = i
-			nxt[v]++
-		}
-		sortTriangleVerticesCCW(&t.Triangles[i], t.Vertices)
-	}
-
-	for i := range numVertices {
-		incidentTriangles := t.IncidentTriangles(i)
-		sortIncidentTriangleIndicesCCW(i, incidentTriangles, t.Triangles)
-	}
-
-	return t, nil
 }
 
 func sortTriangleVerticesCCW(t *[3]int, v s2.PointVector) {

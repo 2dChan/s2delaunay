@@ -24,14 +24,6 @@ type Diagram struct {
 	CellOffsets   []int
 }
 
-func (d *Diagram) NumCells() int {
-	return len(d.Sites)
-}
-
-func (d *Diagram) Cell(i int) Cell {
-	return Cell{idx: i, d: d}
-}
-
 func NewDiagram(sites s2.PointVector, eps float64) (*Diagram, error) {
 	if eps == 0 {
 		eps = defaultEps
@@ -68,51 +60,12 @@ func NewDiagram(sites s2.PointVector, eps float64) (*Diagram, error) {
 	return d, nil
 }
 
-type Cell struct {
-	idx int
-	d   *Diagram
+func (d *Diagram) NumCells() int {
+	return len(d.Sites)
 }
 
-func (c Cell) SiteIndex() int {
-	return c.idx
-}
-
-func (c Cell) Site() s2.Point {
-	return c.d.Sites[c.idx]
-}
-
-func (c Cell) NumVertices() int {
-	return c.d.CellOffsets[c.idx+1] - c.d.CellOffsets[c.idx]
-}
-
-func (c Cell) VertexIndices() []int {
-	return c.d.CellVertices[c.d.CellOffsets[c.idx]:c.d.CellOffsets[c.idx+1]]
-}
-
-func (c Cell) Vertex(i int) s2.Point {
-	start := c.d.CellOffsets[c.idx]
-	end := c.d.CellOffsets[c.idx+1]
-	if i < 0 || i > end-start {
-		panic("Vertex: index out of range")
-	}
-	return c.d.Vertices[c.d.CellVertices[start+i]]
-}
-
-func (c Cell) NumNeighbors() int {
-	return c.d.CellOffsets[c.idx+1] - c.d.CellOffsets[c.idx]
-}
-
-func (c Cell) NeighborIndices() []int {
-	return c.d.CellNeighbors[c.d.CellOffsets[c.idx]:c.d.CellOffsets[c.idx+1]]
-}
-
-func (c Cell) Neighbor(i int) Cell {
-	start := c.d.CellOffsets[c.idx]
-	end := c.d.CellOffsets[c.idx+1]
-	if i < 0 || i > end-start {
-		panic("Neighbor: index out of range")
-	}
-	return c.d.Cell(c.d.CellNeighbors[start+i])
+func (d *Diagram) Cell(i int) Cell {
+	return Cell{idx: i, d: d}
 }
 
 func triangleCircumcenter(p1, p2, p3 s2.Point) s2.Point {
