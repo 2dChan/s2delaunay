@@ -16,28 +16,26 @@ import (
 // DiagramOptions
 
 func TestWithEps(t *testing.T) {
-	const (
-		eps = 0.5
-	)
-
-	opts := &DiagramOptions{Eps: 0}
-	opt := WithEps(eps)
-	opt(opts)
-	if opts.Eps != eps {
-		t.Errorf("WithEps(%v) opts.Eps = %v, want %v", eps, opts.Eps, eps)
+	tests := []struct {
+		name    string
+		eps     float64
+		wantErr bool
+	}{
+		{"eps positive", 0.5, false},
+		{"eps zero", 0, true},
+		{"eps negative", -1, true},
 	}
-}
-
-func TestWithEps_Panic(t *testing.T) {
-	invalidEps := []float64{-1.0, -0.1, 0.0}
-	for _, eps := range invalidEps {
-		t.Run(fmt.Sprintf("eps %v", eps), func(t *testing.T) {
-			defer func() {
-				if r := recover(); r == nil {
-					t.Errorf("WithEps(%v) should panic for eps<=0", eps)
-				}
-			}()
-			WithEps(eps)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := &DiagramOptions{Eps: defaultEps}
+			opt := WithEps(tt.eps)
+			err := opt(opts)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("WithEps(%v) error = %v, wantErr %v", tt.eps, err, tt.wantErr)
+			}
+			if err == nil && opts.Eps != tt.eps {
+				t.Errorf("WithEps(%v) opts.Eps = %v, want %v", tt.eps, opts.Eps, tt.eps)
+			}
 		})
 	}
 }
@@ -45,13 +43,23 @@ func TestWithEps_Panic(t *testing.T) {
 // Diagram
 
 func TestNewDiagram_WithEps(t *testing.T) {
-	const (
-		customEps = 0.01
-	)
-	vertices := utils.GenerateRandomPoints(10, 0)
-	_, err := NewDiagram(vertices, WithEps(customEps))
-	if err != nil {
-		t.Fatalf("NewDiagram(...): error = %v, want nil", err)
+	points := utils.GenerateRandomPoints(10, 0)
+	tests := []struct {
+		name    string
+		eps     float64
+		wantErr bool
+	}{
+		{"eps positive small", 0.01, false},
+		{"eps zero", 0, true},
+		{"eps negative", -0.01, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewDiagram(points, WithEps(tt.eps))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewDiagram(..., WithEps(%v)) error = %v, wantErr %v", tt.eps, err, tt.wantErr)
+			}
+		})
 	}
 }
 
@@ -128,8 +136,14 @@ func TestNewDiagram_VerifyCCW(t *testing.T) {
 		for i := 0; i < cell.NumVertices(); i++ {
 			cIdx := i
 			nIdx := (i + 1) % cell.NumVertices()
-			c := cell.Vertex(cIdx)
-			n := cell.Vertex(nIdx)
+			c, err := cell.Vertex(cIdx)
+			if err != nil {
+				t.Fatalf("cell.Vertex(%d) error = %v, want nil", cIdx, err)
+			}
+			n, err := cell.Vertex(nIdx)
+			if err != nil {
+				t.Fatalf("cell.Vertex(%d) error = %v, want nil", nIdx, err)
+			}
 
 			angle := computeAngleCCW(c, n, center)
 			if angle <= 0 {
@@ -141,8 +155,16 @@ func TestNewDiagram_VerifyCCW(t *testing.T) {
 		for i := 0; i < cell.NumNeighbors(); i++ {
 			cIdx := i
 			nIdx := (i + 1) % cell.NumNeighbors()
-			c := cell.Neighbor(cIdx).Site()
-			n := cell.Neighbor(nIdx).Site()
+			neigh, err := cell.Neighbor(cIdx)
+			if err != nil {
+				t.Fatalf("cell.Neighbor(%d) error = %v, want nil", cIdx, err)
+			}
+			c := neigh.Site()
+			neigh2, err := cell.Neighbor(nIdx)
+			if err != nil {
+				t.Fatalf("cell.Neighbor(%d) error = %v, want nil", nIdx, err)
+			}
+			n := neigh2.Site()
 
 			angle := computeAngleCCW(c, n, center)
 			if angle <= 0 {

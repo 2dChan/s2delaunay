@@ -27,13 +27,13 @@ func (c Cell) VertexIndices() []int {
 	return c.d.CellVertices[c.d.CellOffsets[c.idx]:c.d.CellOffsets[c.idx+1]]
 }
 
-func (c Cell) Vertex(i int) s2.Point {
+func (c Cell) Vertex(i int) (s2.Point, error) {
 	start := c.d.CellOffsets[c.idx]
 	end := c.d.CellOffsets[c.idx+1]
-	if i < 0 || i > end-start {
-		panic(fmt.Sprintf("Vertex: index %d out of range [0 %d)", i, end-start))
+	if i < 0 || i >= end-start {
+		return s2.Point{}, fmt.Errorf("Vertex: index %d out of range [0 %d)", i, end-start)
 	}
-	return c.d.Vertices[c.d.CellVertices[start+i]]
+	return c.d.Vertices[c.d.CellVertices[start+i]], nil
 }
 
 func (c Cell) NumNeighbors() int {
@@ -44,11 +44,11 @@ func (c Cell) NeighborIndices() []int {
 	return c.d.CellNeighbors[c.d.CellOffsets[c.idx]:c.d.CellOffsets[c.idx+1]]
 }
 
-func (c Cell) Neighbor(i int) Cell {
+func (c Cell) Neighbor(i int) (Cell, error) {
 	start := c.d.CellOffsets[c.idx]
 	end := c.d.CellOffsets[c.idx+1]
-	if i < 0 || i > end-start {
-		panic(fmt.Sprintf("Neighbor: index %d out of range [0 %d)", i, end-start))
+	if i < 0 || i >= end-start {
+		return Cell{}, fmt.Errorf("Neighbor: index %d out of range [0 %d)", i, end-start)
 	}
-	return c.d.Cell(c.d.CellNeighbors[start+i])
+	return c.d.Cell(c.d.CellNeighbors[start+i]), nil
 }
