@@ -24,21 +24,21 @@ type Triangulation struct {
 	IncidentTriangleOffsets []int
 }
 
-func (dt *Triangulation) IncidentTriangles(vIdx int) []int {
-	if vIdx < 0 || vIdx+1 >= len(dt.IncidentTriangleOffsets) {
+func (t *Triangulation) IncidentTriangles(vIdx int) []int {
+	if vIdx < 0 || vIdx+1 >= len(t.IncidentTriangleOffsets) {
 		panic("IncidentTriangles: vIdx out of range")
 	}
-	start := dt.IncidentTriangleOffsets[vIdx]
-	end := dt.IncidentTriangleOffsets[vIdx+1]
-	return dt.IncidentTriangleIndices[start:end]
+	start := t.IncidentTriangleOffsets[vIdx]
+	end := t.IncidentTriangleOffsets[vIdx+1]
+	return t.IncidentTriangleIndices[start:end]
 }
 
-func (dt *Triangulation) TriangleVertices(tIdx int) (s2.Point, s2.Point, s2.Point) {
-	if tIdx < 0 || tIdx >= len(dt.Triangles) {
+func (t *Triangulation) TriangleVertices(tIdx int) (s2.Point, s2.Point, s2.Point) {
+	if tIdx < 0 || tIdx >= len(t.Triangles) {
 		panic("TriangleVertices: tIdx out of bounds")
 	}
-	t := dt.Triangles[tIdx]
-	return dt.Vertices[t[0]], dt.Vertices[t[1]], dt.Vertices[t[2]]
+	tri := t.Triangles[tIdx]
+	return t.Vertices[tri[0]], t.Vertices[tri[1]], t.Vertices[tri[2]]
 }
 
 type TriangulationOptions struct {
@@ -72,7 +72,7 @@ func NewTriangulation(vertices s2.PointVector, setters ...TriangulationOption) (
 			errors.New("s2delaunay: insufficient vertices for triangulation (minimum 4 required)")
 	}
 	numTriangles := 2 * (numVertices - 2)
-	dt := &Triangulation{
+	t := &Triangulation{
 		Vertices:                vertices,
 		Triangles:               make([][3]int, numTriangles),
 		IncidentTriangleIndices: make([]int, numTriangles*3),
@@ -90,31 +90,31 @@ func NewTriangulation(vertices s2.PointVector, setters ...TriangulationOption) (
 	}
 
 	for _, idx := range ch.Indices {
-		dt.IncidentTriangleOffsets[idx+1]++
+		t.IncidentTriangleOffsets[idx+1]++
 	}
 	for i := range numVertices {
-		dt.IncidentTriangleOffsets[i+1] += dt.IncidentTriangleOffsets[i]
+		t.IncidentTriangleOffsets[i+1] += t.IncidentTriangleOffsets[i]
 	}
 
 	nxt := make([]int, numVertices)
-	copy(nxt, dt.IncidentTriangleOffsets[:numVertices])
+	copy(nxt, t.IncidentTriangleOffsets[:numVertices])
 	for i := range numTriangles {
 		base := i * 3
 		for j := range 3 {
 			v := ch.Indices[base+j]
-			dt.Triangles[i][j] = v
-			dt.IncidentTriangleIndices[nxt[v]] = i
+			t.Triangles[i][j] = v
+			t.IncidentTriangleIndices[nxt[v]] = i
 			nxt[v]++
 		}
-		sortTriangleVerticesCCW(&dt.Triangles[i], dt.Vertices)
+		sortTriangleVerticesCCW(&t.Triangles[i], t.Vertices)
 	}
 
 	for i := range numVertices {
-		incidentTriangles := dt.IncidentTriangles(i)
-		sortIncidentTriangleIndicesCCW(i, incidentTriangles, dt.Triangles)
+		incidentTriangles := t.IncidentTriangles(i)
+		sortIncidentTriangleIndicesCCW(i, incidentTriangles, t.Triangles)
 	}
 
-	return dt, nil
+	return t, nil
 }
 
 func sortTriangleVerticesCCW(t *[3]int, v s2.PointVector) {
