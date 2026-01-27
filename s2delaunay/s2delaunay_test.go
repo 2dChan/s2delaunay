@@ -194,7 +194,8 @@ func TestTriangleVertices(t *testing.T) {
 	}
 
 	want := [3]s2.Point{points[0], points[1], points[2]}
-	got := dt.TriangleVertices(0)
+	p0, p1, p2 := dt.TriangleVertices(0)
+	got := [3]s2.Point{p0, p1, p2}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("dt.TriangleVertices(0) mismatch (-want +got):\n%v", diff)
 	}
@@ -217,7 +218,7 @@ func TestTriangleVertices_Panic(t *testing.T) {
 					panicked = true
 				}
 			}()
-			_ = dt.TriangleVertices(idx)
+			dt.TriangleVertices(idx)
 		}()
 		if panicked == false {
 			t.Errorf("dt.TriangleVertices(%d) did not panic, want panic", idx)

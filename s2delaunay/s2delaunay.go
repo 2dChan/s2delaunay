@@ -62,12 +62,12 @@ func (dt *DelaunayTriangulation) IncidentTriangles(vIdx int) []int {
 	return dt.IncidentTriangleIndices[start:end]
 }
 
-func (dt *DelaunayTriangulation) TriangleVertices(tIdx int) [3]s2.Point {
+func (dt *DelaunayTriangulation) TriangleVertices(tIdx int) (s2.Point, s2.Point, s2.Point) {
 	if tIdx < 0 || tIdx >= len(dt.Triangles) {
 		panic("TriangleVertices: tIdx out of bounds")
 	}
 	t := dt.Triangles[tIdx]
-	return [3]s2.Point{dt.Vertices[t.V[0]], dt.Vertices[t.V[1]], dt.Vertices[t.V[2]]}
+	return dt.Vertices[t.V[0]], dt.Vertices[t.V[1]], dt.Vertices[t.V[2]]
 }
 
 type DelaunayTriangulationOptions struct {

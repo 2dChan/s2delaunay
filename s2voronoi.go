@@ -53,8 +53,8 @@ func ComputeVoronoiDiagram(sites s2.PointVector, eps float64) (*VoronoiDiagram, 
 	}
 
 	for i := range numTriangles {
-		p := dt.TriangleVertices(i)
-		vd.Vertices[i] = s2.Point{Vector: triangleCircumcenter(p[0], p[1], p[2]).Normalize()}
+		p0, p1, p2 := dt.TriangleVertices(i)
+		vd.Vertices[i] = s2.Point{Vector: triangleCircumcenter(p0, p1, p2).Normalize()}
 	}
 
 	for vIdx := range dt.Vertices {
