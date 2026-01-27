@@ -203,6 +203,18 @@ func TestCell_Vertex(t *testing.T) {
 	}
 }
 
+func TestCell_Vertex_Panic(t *testing.T) {
+	d := mustNewDiagram(t, 100)
+	c := d.Cell(0)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("c.VertexIndices should panic for i out of range")
+		}
+	}()
+	c.Vertex(-1)
+	c.Vertex(len(d.CellOffsets) + 1)
+}
+
 func TestCell_NumNeighbors(t *testing.T) {
 	vd := mustNewDiagram(t, 100)
 	for i := range vd.Sites {
@@ -238,6 +250,19 @@ func TestCell_Neighbor(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestCell_Neighbor_Panic(t *testing.T) {
+	d := mustNewDiagram(t, 100)
+	d.CellOffsets = []int{0, 1}
+	c := d.Cell(0)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Expected panic for invalid Neighbor indices, but did not panic")
+		}
+	}()
+	c.Neighbor(-1)
+	c.Neighbor(len(d.CellOffsets) + 1)
 }
 
 func TestTriangleCircumcenter(t *testing.T) {
