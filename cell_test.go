@@ -23,7 +23,7 @@ func TestCell_Site(t *testing.T) {
 	for i, want := range vd.Sites {
 		c := vd.Cell(i)
 		if got := c.Site(); got != want {
-			t.Errorf("c.SiteIndex() = %v, want %v", got, want)
+			t.Errorf("c.Site() = %v, want %v", got, want)
 		}
 	}
 }
@@ -46,7 +46,7 @@ func TestCell_VertexIndices(t *testing.T) {
 		want := vd.CellVertices[vd.CellOffsets[i]:vd.CellOffsets[i+1]]
 		got := c.VertexIndices()
 		if diff := cmp.Diff(want, got); diff != "" {
-			t.Errorf("c.VertexIndices() mismatch (-want +got):\n%v", diff)
+			t.Errorf("c.VertexIndices() mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -71,7 +71,7 @@ func TestCell_Vertex_Panic(t *testing.T) {
 	c := d.Cell(0)
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("c.VertexIndices should panic for i out of range")
+			t.Errorf("c.Vertex(...) should panic for i out of range")
 		}
 	}()
 	c.Vertex(-1)
@@ -96,7 +96,7 @@ func TestCell_NeighborIndices(t *testing.T) {
 		want := vd.CellNeighbors[vd.CellOffsets[i]:vd.CellOffsets[i+1]]
 		got := c.NeighborIndices()
 		if diff := cmp.Diff(want, got); diff != "" {
-			t.Errorf("c.NeighborIndices() mismatch (-want +got, cell %d):\n%v", i, diff)
+			t.Errorf("c.NeighborIndices() mismatch (-want +got, cell %d):\n%s", i, diff)
 		}
 	}
 }
@@ -121,7 +121,7 @@ func TestCell_Neighbor_Panic(t *testing.T) {
 	c := d.Cell(0)
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("Expected panic for invalid Neighbor indices, but did not panic")
+			t.Errorf("c.Neighbor(...) should panic for invalid indices")
 		}
 	}()
 	c.Neighbor(-1)

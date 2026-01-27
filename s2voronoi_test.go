@@ -24,7 +24,7 @@ func TestWithEps(t *testing.T) {
 	opt := WithEps(eps)
 	opt(opts)
 	if opts.Eps != eps {
-		t.Errorf("WithEps(%v): opts.Eps = %v, want %v", eps, opts.Eps, eps)
+		t.Errorf("WithEps(%v) opts.Eps = %v, want %v", eps, opts.Eps, eps)
 	}
 }
 
@@ -34,7 +34,7 @@ func TestWithEps_Panic(t *testing.T) {
 		t.Run(fmt.Sprintf("eps %v", eps), func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Errorf("WithEps(%v): shoud panic for eps<=0", eps)
+					t.Errorf("WithEps(%v) should panic for eps<=0", eps)
 				}
 			}()
 			WithEps(eps)
@@ -74,19 +74,19 @@ func TestDiagram_Invariants(t *testing.T) {
 			want := 2*tt.size - 4
 			got := len(vd.Vertices)
 			if got != want {
-				t.Errorf("NewDiagram(...).Vertices count = %v, want %v", got, want)
+				t.Errorf("vd.Vertices count = %v, want %v", got, want)
 			}
 
 			want1 := tt.size
 			got1 := len(vd.Sites)
 			if got1 != want1 {
-				t.Errorf("NewDiagram(...).Sites count = %v, want %v", got1, want1)
+				t.Errorf("vd.Sites count = %v, want %v", got1, want1)
 			}
 
 			want2 := len(vd.Sites)
 			got2 := vd.NumCells()
 			if got2 != want2 {
-				t.Errorf("NewDiagram(...).NumCells() = %v, want %v", got2, want2)
+				t.Errorf("vd.NumCells() = %v, want %v", got2, want2)
 			}
 		})
 	}
@@ -96,7 +96,7 @@ func TestNewTriangulation_DegenerateInput(t *testing.T) {
 	// TODO: Add more tests for broken or invalid scenarios.
 	points := utils.GenerateRandomPoints(3, 0)
 	if _, err := NewDiagram(points); err == nil {
-		t.Errorf("NewDelaunayTriangulation(...) error = nil, want non-nil")
+		t.Errorf("NewDiagram(...) error = nil, want non-nil")
 	}
 }
 
@@ -106,14 +106,14 @@ func TestNewDiagram_OnSphere(t *testing.T) {
 	for i, v := range vd.Vertices {
 		n := v.Norm()
 		if math.Abs(n-1.0) > defaultEps {
-			t.Errorf("NewDiagram(...).Vertices[%d] norm = %v, want ~1.0", i, n)
+			t.Errorf("vd.Vertices[%d] norm = %v, want ~1.0", i, n)
 		}
 	}
 
 	for i, s := range vd.Sites {
 		n := s.Norm()
 		if math.Abs(n-1.0) > defaultEps {
-			t.Errorf("NewDiagram(...).Sites[%d] norm = %v, want ~1.0", i, n)
+			t.Errorf("vd.Sites[%d] norm = %v, want ~1.0", i, n)
 		}
 	}
 }
@@ -133,7 +133,7 @@ func TestNewDiagram_VerifyCCW(t *testing.T) {
 
 			angle := computeAngleCCW(c, n, center)
 			if angle <= 0 {
-				t.Errorf("NewDiagram(...).Cell(%d) Vertices %v,%v not sort in CCW", i,
+				t.Errorf("vd.Cell(%d) Vertices %d,%d not sorted in CCW", i,
 					cIdx, nIdx)
 			}
 		}
@@ -146,7 +146,7 @@ func TestNewDiagram_VerifyCCW(t *testing.T) {
 
 			angle := computeAngleCCW(c, n, center)
 			if angle <= 0 {
-				t.Errorf("NewDiagram(...).Cell(%d) Neighbors %v,%v not sort in CCW", i,
+				t.Errorf("vd.Cell(%d) Neighbors %d,%d not sorted in CCW", i,
 					cIdx, nIdx)
 			}
 		}
@@ -179,7 +179,7 @@ func TestTriangleCircumcenter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := triangleCircumcenter(tt.p0, tt.p1, tt.p2)
 			if got.Distance(tt.want) > 1e-9 {
-				t.Errorf("%s: got %v want %v", tt.name, got, tt.want)
+				t.Errorf("triangleCircumcenter(...) = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -44,7 +44,7 @@ func TestGenerateRandomPoints_OnUnitSphere(t *testing.T) {
 	for i, p := range points {
 		norm := p.Norm()
 		if math.Abs(norm-1.0) > epsilon {
-			t.Errorf("GenerateRandomPoints(%v, %v)[%d]: point norm = %v, want ≈1", cnt, seed,
+			t.Errorf("GenerateRandomPoints(%v, %v)[%d] point norm = %v, want ≈1", cnt, seed,
 				i, norm)
 		}
 	}
@@ -58,6 +58,6 @@ func TestGenerateRandomPoints_Determinism(t *testing.T) {
 	a := GenerateRandomPoints(cnt, seed)
 	b := GenerateRandomPoints(cnt, seed)
 	if diff := cmp.Diff(b, a, cmp.AllowUnexported(s2.Point{})); diff != "" {
-		t.Errorf("GenerateRandomPoints(%v, %v) mismatch (-want +got):\n%v", cnt, seed, diff)
+		t.Errorf("GenerateRandomPoints(%v, %v) mismatch (-want +got):\n%s", cnt, seed, diff)
 	}
 }
