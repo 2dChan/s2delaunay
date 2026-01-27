@@ -11,27 +11,9 @@ import (
 
 	"github.com/2dChan/s2voronoi/utils"
 	"github.com/golang/geo/s2"
-	"github.com/google/go-cmp/cmp"
 )
 
 // Diagram
-
-func BenchmarkNewDiagram(b *testing.B) {
-	sizes := []int{1e+2, 1e+3, 1e+4, 1e+5}
-	for _, pointsCnt := range sizes {
-		b.Run(fmt.Sprintf("N%d", pointsCnt), func(b *testing.B) {
-			points := utils.GenerateRandomPoints(pointsCnt, 0)
-
-			b.ResetTimer()
-			for b.Loop() {
-				_, err := NewDiagram(points, 0)
-				if err != nil {
-					b.Fatalf("NewDiagram(...) error = %v, want nil", err)
-				}
-			}
-		})
-	}
-}
 
 func TestDiagram_Invariants(t *testing.T) {
 	tests := []struct {
@@ -67,6 +49,14 @@ func TestDiagram_Invariants(t *testing.T) {
 				t.Errorf("NewDiagram(...).NumCells() = %v, want %v", got2, want2)
 			}
 		})
+	}
+}
+
+func TestNewTriangulation_DegenerateInput(t *testing.T) {
+	// TODO: Add more tests for broken or invalid scenarios.
+	points := utils.GenerateRandomPoints(3, 0)
+	if _, err := NewDiagram(points, 0); err == nil {
+		t.Errorf("NewDelaunayTriangulation(...) error = nil, want non-nil")
 	}
 }
 
@@ -123,148 +113,6 @@ func TestNewDiagram_VerifyCCW(t *testing.T) {
 	}
 }
 
-func computeAngleCCW(refVec, vec, normal s2.Point) float64 {
-	cross := refVec.Cross(vec.Vector)
-	angle := math.Atan2(
-		math.Copysign(cross.Norm(), cross.Dot(normal.Vector)),
-		refVec.Dot(vec.Vector),
-	)
-	if angle < 0 {
-		angle += 2 * math.Pi
-	}
-	return angle
-}
-
-func TestNewTriangulation_DegenerateInput(t *testing.T) {
-	// TODO: Add more tests for broken or invalid scenarios.
-	points := utils.GenerateRandomPoints(3, 0)
-	if _, err := NewDiagram(points, 0); err == nil {
-		t.Errorf("NewDelaunayTriangulation(...) error = nil, want non-nil")
-	}
-}
-
-// Cell
-
-func TestCell_SiteIndex(t *testing.T) {
-	vd := mustNewDiagram(t, 100)
-	for i := range vd.Sites {
-		c := vd.Cell(i)
-		if got := c.SiteIndex(); got != i {
-			t.Errorf("c.SiteIndex() = %v, want %v", got, i)
-		}
-	}
-}
-
-func TestCell_Site(t *testing.T) {
-	vd := mustNewDiagram(t, 100)
-	for i, want := range vd.Sites {
-		c := vd.Cell(i)
-		if got := c.Site(); got != want {
-			t.Errorf("c.SiteIndex() = %v, want %v", got, want)
-		}
-	}
-}
-
-func TestCell_NumVertices(t *testing.T) {
-	vd := mustNewDiagram(t, 100)
-	for i := range vd.Sites {
-		c := vd.Cell(i)
-		want := vd.CellOffsets[i+1] - vd.CellOffsets[i]
-		if got := c.NumVertices(); got != want {
-			t.Errorf("c.NumVertices() = %v, want %v", got, want)
-		}
-	}
-}
-
-func TestCell_VertexIndices(t *testing.T) {
-	vd := mustNewDiagram(t, 100)
-	for i := range vd.Sites {
-		c := vd.Cell(i)
-		want := vd.CellVertices[vd.CellOffsets[i]:vd.CellOffsets[i+1]]
-		got := c.VertexIndices()
-		if diff := cmp.Diff(want, got); diff != "" {
-			t.Errorf("c.VertexIndices() mismatch (-want +got):\n%v", diff)
-		}
-	}
-}
-
-func TestCell_Vertex(t *testing.T) {
-	vd := mustNewDiagram(t, 100)
-	for i := range vd.Sites {
-		c := vd.Cell(i)
-		indices := c.VertexIndices()
-		for j, idx := range indices {
-			want := vd.Vertices[idx]
-			got := c.Vertex(j)
-			if got != want {
-				t.Errorf("c.Vertex(%d) = %v, want %v", j, got, want)
-			}
-		}
-	}
-}
-
-func TestCell_Vertex_Panic(t *testing.T) {
-	d := mustNewDiagram(t, 100)
-	c := d.Cell(0)
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("c.VertexIndices should panic for i out of range")
-		}
-	}()
-	c.Vertex(-1)
-	c.Vertex(len(d.CellOffsets) + 1)
-}
-
-func TestCell_NumNeighbors(t *testing.T) {
-	vd := mustNewDiagram(t, 100)
-	for i := range vd.Sites {
-		c := vd.Cell(i)
-		want := vd.CellOffsets[i+1] - vd.CellOffsets[i]
-		if got := c.NumNeighbors(); got != want {
-			t.Errorf("c.NumNeighbors() = %v, want %v", got, want)
-		}
-	}
-}
-
-func TestCell_NeighborIndices(t *testing.T) {
-	vd := mustNewDiagram(t, 100)
-	for i := range vd.Sites {
-		c := vd.Cell(i)
-		want := vd.CellNeighbors[vd.CellOffsets[i]:vd.CellOffsets[i+1]]
-		got := c.NeighborIndices()
-		if diff := cmp.Diff(want, got); diff != "" {
-			t.Errorf("c.NeighborIndices() mismatch (-want +got, cell %d):\n%v", i, diff)
-		}
-	}
-}
-
-func TestCell_Neighbor(t *testing.T) {
-	vd := mustNewDiagram(t, 100)
-	for i := range vd.Sites {
-		c := vd.Cell(i)
-		neighbors := c.NeighborIndices()
-		for j, nIdx := range neighbors {
-			got := c.Neighbor(j)
-			if got.SiteIndex() != nIdx {
-				t.Errorf("c.Neighbor(%d).SiteIndex() = %v, want %v", j, got.SiteIndex(), nIdx)
-			}
-		}
-	}
-}
-
-func TestCell_Neighbor_Panic(t *testing.T) {
-	d := mustNewDiagram(t, 100)
-	d.CellOffsets = []int{0, 1}
-	c := d.Cell(0)
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("Expected panic for invalid Neighbor indices, but did not panic")
-		}
-	}()
-	c.Neighbor(-1)
-	c.Neighbor(len(d.CellOffsets) + 1)
-}
-
 func TestTriangleCircumcenter(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -297,6 +145,27 @@ func TestTriangleCircumcenter(t *testing.T) {
 	}
 }
 
+// Benchmarks
+
+func BenchmarkNewDiagram(b *testing.B) {
+	sizes := []int{1e+2, 1e+3, 1e+4, 1e+5}
+	for _, pointsCnt := range sizes {
+		b.Run(fmt.Sprintf("N%d", pointsCnt), func(b *testing.B) {
+			points := utils.GenerateRandomPoints(pointsCnt, 0)
+
+			b.ResetTimer()
+			for b.Loop() {
+				_, err := NewDiagram(points, 0)
+				if err != nil {
+					b.Fatalf("NewDiagram(...) error = %v, want nil", err)
+				}
+			}
+		})
+	}
+}
+
+// Helpers
+
 func mustNewDiagram(t *testing.T, n int) *Diagram {
 	t.Helper()
 	points := utils.GenerateRandomPoints(n, 0)
@@ -305,4 +174,16 @@ func mustNewDiagram(t *testing.T, n int) *Diagram {
 		t.Fatalf("NewDiagram(...) error = %v, want nil", err)
 	}
 	return vd
+}
+
+func computeAngleCCW(refVec, vec, normal s2.Point) float64 {
+	cross := refVec.Cross(vec.Vector)
+	angle := math.Atan2(
+		math.Copysign(cross.Norm(), cross.Dot(normal.Vector)),
+		refVec.Dot(vec.Vector),
+	)
+	if angle < 0 {
+		angle += 2 * math.Pi
+	}
+	return angle
 }

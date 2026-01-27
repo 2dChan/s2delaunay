@@ -47,40 +47,70 @@ func TestWithEps_Panic(t *testing.T) {
 
 // Triangulation
 
-func BenchmarkConvexHull(b *testing.B) {
-	sizes := []int{1e+2, 1e+3, 1e+4, 1e+5}
-	for _, pointsCnt := range sizes {
-		b.Run(fmt.Sprintf("N%d", pointsCnt), func(b *testing.B) {
-			points := utils.GenerateRandomPoints(pointsCnt, 0)
-			v3 := make([]r3.Vector, len(points))
-			for i, p := range points {
-				v3[i] = p.Vector
-			}
-
-			qh := new(quickhull.QuickHull)
-
-			b.ResetTimer()
-			for b.Loop() {
-				qh.ConvexHull(v3, true, true, 0)
-			}
-		})
+func TestNewTriangulation_WithEps(t *testing.T) {
+	vertices := utils.GenerateRandomPoints(10, 0)
+	customEps := 0.01
+	_, err := NewTriangulation(vertices, WithEps(customEps))
+	if err != nil {
+		t.Fatalf("NewTriangulation failed: %v", err)
 	}
 }
 
-func BenchmarkNewTriangulation(b *testing.B) {
-	sizes := []int{1e+2, 1e+3, 1e+4, 1e+5}
-	for _, pointsCnt := range sizes {
-		b.Run(fmt.Sprintf("N%d", pointsCnt), func(b *testing.B) {
-			points := utils.GenerateRandomPoints(pointsCnt, 0)
+func TestNewTriangulation_DegenerateInput(t *testing.T) {
+	vertices := s2.PointVector{
+		s2.PointFromCoords(1, 0, 0),
+		s2.PointFromCoords(0, 1, 0),
+		s2.PointFromCoords(0, 0, 1),
+	}
+	if _, err := NewTriangulation(vertices); err == nil {
+		t.Errorf("NewTriangulation(...) error = nil, want non-nil")
+	}
+}
 
-			b.ResetTimer()
-			for b.Loop() {
-				_, err := NewTriangulation(points)
-				if err != nil {
-					b.Fatalf("NewTriangulation(...) error = %v, want nil", err)
-				}
+func TestNewTriangulation_VerticesOnSphere(t *testing.T) {
+	dt := mustNewTriangulation(t, 100)
+
+	for i, p := range dt.Vertices {
+		norm := p.Norm()
+		if math.Abs(norm-1.0) > defaultEps {
+			t.Errorf(
+				"NewTriangulation(...).Vertices[%d] norm = %v, want ~1.0", i,
+				norm)
+		}
+	}
+}
+
+func TestNewTriangulation_VerifyTrianglesCCW(t *testing.T) {
+	dt := mustNewTriangulation(t, 100)
+
+	for i, tri := range dt.Triangles {
+		p0, p1, p2 := dt.Vertices[tri[0]], dt.Vertices[tri[1]], dt.Vertices[tri[2]]
+		cross := p1.Sub(p0.Vector).Cross(p2.Sub(p0.Vector))
+		dot := cross.Dot(p0.Vector)
+		if dot < 0 {
+			t.Errorf("NewTriangulation(...).Triangles[%d] vertices not sorted in CCW",
+				i)
+		}
+	}
+}
+
+func TestNewTriangulation_VerifyIncidentTrianglesSorted(t *testing.T) {
+	dt := mustNewTriangulation(t, 100)
+
+	for vIdx := range len(dt.Vertices) {
+		incidentTris := dt.IncidentTriangles(vIdx)
+		for i := 1; i < len(incidentTris); i++ {
+			ct := dt.Triangles[incidentTris[i-1]]
+			nt := dt.Triangles[incidentTris[i]]
+
+			nextVertex := NextVertex(ct, vIdx)
+			prevVertex := PrevVertex(nt, vIdx)
+
+			if nextVertex != prevVertex {
+				t.Errorf("dt.IncidentTriangles(%d) triangles %v and %v not CCW neighbors", vIdx,
+					i-1, i)
 			}
-		})
+		}
 	}
 }
 
@@ -183,73 +213,6 @@ func TestTriangleVertices_Panic(t *testing.T) {
 	checkPanic(-1)
 }
 
-func TestNewTriangulation_WithEps(t *testing.T) {
-	vertices := utils.GenerateRandomPoints(10, 0)
-	customEps := 0.01
-	_, err := NewTriangulation(vertices, WithEps(customEps))
-	if err != nil {
-		t.Fatalf("NewTriangulation failed: %v", err)
-	}
-}
-
-func TestNewTriangulation_DegenerateInput(t *testing.T) {
-	vertices := s2.PointVector{
-		s2.PointFromCoords(1, 0, 0),
-		s2.PointFromCoords(0, 1, 0),
-		s2.PointFromCoords(0, 0, 1),
-	}
-	if _, err := NewTriangulation(vertices); err == nil {
-		t.Errorf("NewTriangulation(...) error = nil, want non-nil")
-	}
-}
-
-func TestNewTriangulation_VerticesOnSphere(t *testing.T) {
-	dt := mustNewTriangulation(t, 100)
-
-	for i, p := range dt.Vertices {
-		norm := p.Norm()
-		if math.Abs(norm-1.0) > defaultEps {
-			t.Errorf(
-				"NewTriangulation(...).Vertices[%d] norm = %v, want ~1.0", i,
-				norm)
-		}
-	}
-}
-
-func TestNewTriangulation_VerifyTrianglesCCW(t *testing.T) {
-	dt := mustNewTriangulation(t, 100)
-
-	for i, tri := range dt.Triangles {
-		p0, p1, p2 := dt.Vertices[tri[0]], dt.Vertices[tri[1]], dt.Vertices[tri[2]]
-		cross := p1.Sub(p0.Vector).Cross(p2.Sub(p0.Vector))
-		dot := cross.Dot(p0.Vector)
-		if dot < 0 {
-			t.Errorf("NewTriangulation(...).Triangles[%d] vertices not sorted in CCW",
-				i)
-		}
-	}
-}
-
-func TestNewTriangulation_VerifyIncidentTrianglesSorted(t *testing.T) {
-	dt := mustNewTriangulation(t, 100)
-
-	for vIdx := range len(dt.Vertices) {
-		incidentTris := dt.IncidentTriangles(vIdx)
-		for i := 1; i < len(incidentTris); i++ {
-			ct := dt.Triangles[incidentTris[i-1]]
-			nt := dt.Triangles[incidentTris[i]]
-
-			nextVertex := NextVertex(ct, vIdx)
-			prevVertex := PrevVertex(nt, vIdx)
-
-			if nextVertex != prevVertex {
-				t.Errorf("dt.IncidentTriangles(%d) triangles %v and %v not CCW neighbors", vIdx,
-					i-1, i)
-			}
-		}
-	}
-}
-
 func TestSortTriangleVerticesCCW(t *testing.T) {
 	a := s2.PointFromCoords(1, 0, 0)
 	b := s2.PointFromCoords(0, 1, 0)
@@ -298,6 +261,102 @@ func TestSortIncidentTriangleIndicesCCW(t *testing.T) {
 	}
 }
 
+// Triangle Prev/Next vertex
+
+func TestPrevVertex(t *testing.T) {
+	tri := [3]int{1, 2, 3}
+	for i, in := range tri {
+		got := PrevVertex(tri, in)
+		want := tri[(i+2)%len(tri)]
+		if got != want {
+			t.Errorf("tri.PrevVertex(%v) = %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestPrevVertex_Panic(t *testing.T) {
+	tri := [3]int{1, 2, 3}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("PrevVertex should panic for vIdx not in triangle")
+		}
+	}()
+	PrevVertex(tri, -1)
+}
+
+func TestNextVertex(t *testing.T) {
+	tri := [3]int{1, 2, 3}
+	for i, in := range tri {
+		got := NextVertex(tri, in)
+		want := tri[(i+1)%len(tri)]
+		if got != want {
+			t.Errorf("tri.NextVertex(%v) = %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestNextVertex_Panic(t *testing.T) {
+	tri := [3]int{1, 2, 3}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("PrevVertex should panic for vIdx not in triangle")
+		}
+	}()
+	NextVertex(tri, -1)
+}
+
+// Benchmarks
+
+func BenchmarkConvexHull(b *testing.B) {
+	sizes := []int{1e+2, 1e+3, 1e+4, 1e+5}
+	for _, pointsCnt := range sizes {
+		b.Run(fmt.Sprintf("N%d", pointsCnt), func(b *testing.B) {
+			points := utils.GenerateRandomPoints(pointsCnt, 0)
+			v3 := make([]r3.Vector, len(points))
+			for i, p := range points {
+				v3[i] = p.Vector
+			}
+
+			qh := new(quickhull.QuickHull)
+
+			b.ResetTimer()
+			for b.Loop() {
+				qh.ConvexHull(v3, true, true, 0)
+			}
+		})
+	}
+}
+
+func BenchmarkNewTriangulation(b *testing.B) {
+	sizes := []int{1e+2, 1e+3, 1e+4, 1e+5}
+	for _, pointsCnt := range sizes {
+		b.Run(fmt.Sprintf("N%d", pointsCnt), func(b *testing.B) {
+			points := utils.GenerateRandomPoints(pointsCnt, 0)
+
+			b.ResetTimer()
+			for b.Loop() {
+				_, err := NewTriangulation(points)
+				if err != nil {
+					b.Fatalf("NewTriangulation(...) error = %v, want nil", err)
+				}
+			}
+		})
+	}
+}
+
+// Helpers
+
+func mustNewTriangulation(t *testing.T, n int) *Triangulation {
+	t.Helper()
+	vertices := utils.GenerateRandomPoints(n, 0)
+
+	dt, err := NewTriangulation(vertices)
+	if err != nil {
+		t.Fatalf("NewTriangulation(...) error = %v, want nil", err)
+	}
+	return dt
+}
+
 func cyclicEqual(a, b []int) bool {
 	if len(a) != len(b) {
 		return false
@@ -322,57 +381,4 @@ func cyclicEqual(a, b []int) bool {
 	}
 
 	return false
-}
-
-func mustNewTriangulation(t *testing.T, n int) *Triangulation {
-	t.Helper()
-	vertices := utils.GenerateRandomPoints(n, 0)
-
-	dt, err := NewTriangulation(vertices)
-	if err != nil {
-		t.Fatalf("NewTriangulation(...) error = %v, want nil", err)
-	}
-	return dt
-}
-
-func TestTrianglePrevVertex(t *testing.T) {
-	tri := [3]int{1, 2, 3}
-	for i, in := range tri {
-		got := PrevVertex(tri, in)
-		want := tri[(i+2)%len(tri)]
-		if got != want {
-			t.Errorf("tri.PrevVertex(%v) = %v, want %v", in, got, want)
-		}
-	}
-}
-
-func TestTrianglePrevVertex_Panic(t *testing.T) {
-	tri := [3]int{1, 2, 3}
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("PrevVertex should panic for vIdx not in triangle")
-		}
-	}()
-	PrevVertex(tri, -1)
-}
-
-func TestTriangleNextVertex(t *testing.T) {
-	tri := [3]int{1, 2, 3}
-	for i, in := range tri {
-		got := NextVertex(tri, in)
-		want := tri[(i+1)%len(tri)]
-		if got != want {
-			t.Errorf("tri.NextVertex(%v) = %v, want %v", in, got, want)
-		}
-	}
-}
-
-func TestTriangleNextVertex_Panic(t *testing.T) {
-	tri := [3]int{1, 2, 3}
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("PrevVertex should panic for vIdx not in triangle")
-		}
-	}()
-	NextVertex(tri, -1)
 }
