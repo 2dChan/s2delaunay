@@ -58,24 +58,24 @@ func TestCell_Vertex(t *testing.T) {
 		indices := c.VertexIndices()
 		for j, idx := range indices {
 			want := vd.Vertices[idx]
-			got := c.Vertex(j)
+			got, err := c.Vertex(j)
+			if err != nil {
+				t.Fatalf("c.Vertex(%d) error = %v, want nil", j, err)
+			}
 			if got != want {
 				t.Errorf("c.Vertex(%d) = %v, want %v", j, got, want)
 			}
 		}
-	}
-}
 
-func TestCell_Vertex_Panic(t *testing.T) {
-	d := mustNewDiagram(t, 100)
-	c := d.Cell(0)
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("c.Vertex(...) should panic for i out of range")
+		_, err := c.Vertex(-1)
+		if err == nil {
+			t.Errorf("c.Vertex(-1) error = nil, want non-nil")
 		}
-	}()
-	c.Vertex(-1)
-	c.Vertex(len(d.CellOffsets) + 1)
+		_, err = c.Vertex(c.NumVertices())
+		if err == nil {
+			t.Errorf("c.Vertex(%d) error = nil, want non-nil", c.NumVertices())
+		}
+	}
 }
 
 func TestCell_NumNeighbors(t *testing.T) {
@@ -107,23 +107,21 @@ func TestCell_Neighbor(t *testing.T) {
 		c := vd.Cell(i)
 		neighbors := c.NeighborIndices()
 		for j, nIdx := range neighbors {
-			got := c.Neighbor(j)
+			got, err := c.Neighbor(j)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if got.SiteIndex() != nIdx {
 				t.Errorf("c.Neighbor(%d).SiteIndex() = %v, want %v", j, got.SiteIndex(), nIdx)
 			}
 		}
-	}
-}
-
-func TestCell_Neighbor_Panic(t *testing.T) {
-	d := mustNewDiagram(t, 100)
-	d.CellOffsets = []int{0, 1}
-	c := d.Cell(0)
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("c.Neighbor(...) should panic for invalid indices")
+		_, err := c.Neighbor(-1)
+		if err == nil {
+			t.Errorf("c.Neighbor(-1) error = nil, want non-nil")
 		}
-	}()
-	c.Neighbor(-1)
-	c.Neighbor(len(d.CellOffsets) + 1)
+		_, err = c.Neighbor(c.NumNeighbors())
+		if err == nil {
+			t.Errorf("c.Neighbor(%d) error = nil, want non-nil", c.NumNeighbors())
+		}
+	}
 }

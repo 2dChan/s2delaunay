@@ -30,14 +30,16 @@ type DiagramOptions struct {
 	Eps float64
 }
 
-type DiagramOption func(*DiagramOptions)
+type DiagramOption func(*DiagramOptions) error
 
 func WithEps(eps float64) DiagramOption {
-	if eps <= 0 {
-		panic(fmt.Sprintf("WithEps: eps must be non-negative got %v", eps))
-	}
-	return func(o *DiagramOptions) {
+	return func(o *DiagramOptions) error {
+		if eps <= 0 {
+			return fmt.Errorf("WithEps: eps must be positive got %v", eps)
+
+		}
 		o.Eps = eps
+		return nil
 	}
 }
 
@@ -46,7 +48,10 @@ func NewDiagram(sites s2.PointVector, setters ...DiagramOption) (*Diagram, error
 		Eps: defaultEps,
 	}
 	for _, set := range setters {
-		set(&opts)
+		err := set(&opts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	dt, err := s2delaunay.NewTriangulation(sites, s2delaunay.WithEps(opts.Eps))
@@ -65,15 +70,25 @@ func NewDiagram(sites s2.PointVector, setters ...DiagramOption) (*Diagram, error
 	}
 
 	for i := range numTriangles {
-		p0, p1, p2 := dt.TriangleVertices(i)
-		d.Vertices[i] = s2.Point{Vector: triangleCircumcenter(p0, p1, p2).Normalize()}
+		p, err := dt.TriangleVertices(i)
+		if err != nil {
+			return nil, err
+		}
+		d.Vertices[i] = s2.Point{Vector: triangleCircumcenter(p[0], p[1], p[2]).Normalize()}
 	}
 
 	for vIdx := range dt.Vertices {
 		offset := dt.IncidentTriangleOffsets[vIdx]
-		it := dt.IncidentTriangles(vIdx)
+		it, err := dt.IncidentTriangles(vIdx)
+		if err != nil {
+			return nil, err
+		}
 		for i, tIdx := range it {
-			d.CellNeighbors[offset+i] = s2delaunay.NextVertex(dt.Triangles[tIdx], vIdx)
+			nxt, err := s2delaunay.NextVertex(dt.Triangles[tIdx], vIdx)
+			if err != nil {
+				return nil, err
+			}
+			d.CellNeighbors[offset+i] = nxt
 		}
 	}
 

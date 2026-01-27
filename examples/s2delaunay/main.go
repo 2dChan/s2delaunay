@@ -5,7 +5,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/2dChan/s2voronoi/s2delaunay"
@@ -47,12 +47,12 @@ func PointToScreen(p s2.Point) (int, int) {
 func renderTriangulation(dt *s2delaunay.Triangulation) {
 	file, err := os.Create(filename)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}()
 
@@ -93,8 +93,7 @@ func main() {
 	points := utils.GenerateRandomPoints(100, 0)
 	dt, err := s2delaunay.NewTriangulation(points)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	renderTriangulation(dt)

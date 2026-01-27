@@ -5,7 +5,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/2dChan/s2voronoi"
@@ -47,12 +47,12 @@ func PointToScreen(p s2.Point) (int, int) {
 func renderDiagram(vd *s2voronoi.Diagram) {
 	file, err := os.Create(filename)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}()
 
@@ -68,10 +68,22 @@ func renderDiagram(vd *s2voronoi.Diagram) {
 		yPoints := make([]int, numPoints)
 
 		draw := true
-		x0, _ := PointToScreen(cell.Vertex(0))
-		for i := range cell.NumVertices() {
-			xPoints[i], yPoints[i] = PointToScreen(cell.Vertex(i))
-			if Abs(x0-xPoints[i]) > width/2 {
+		v, err := cell.Vertex(0)
+		if err != nil {
+			log.Printf("error getting vertex for cell %d: %v", i, err)
+			continue
+		}
+		x0, _ := PointToScreen(v)
+		for j := range cell.NumVertices() {
+			v, err := cell.Vertex(j)
+			if err != nil {
+				log.Printf("error getting vertex for cell %d: %v", i, err)
+				draw = false
+				break
+			}
+
+			xPoints[j], yPoints[j] = PointToScreen(v)
+			if Abs(x0-xPoints[j]) > width/2 {
 				draw = false
 				break
 			}
@@ -96,8 +108,7 @@ func main() {
 	points := utils.GenerateRandomPoints(1000, 0)
 	vd, err := s2voronoi.NewDiagram(points)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	renderDiagram(vd)
