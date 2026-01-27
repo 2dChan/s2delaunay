@@ -11,6 +11,7 @@ import (
 
 	"github.com/2dChan/s2voronoi/utils"
 	"github.com/golang/geo/s2"
+	"github.com/google/go-cmp/cmp"
 )
 
 // DiagramOptions
@@ -175,6 +176,45 @@ func TestNewDiagram_VerifyCCW(t *testing.T) {
 					cIdx, nIdx)
 			}
 		}
+	}
+}
+
+func TestDiagram_NumCells(t *testing.T) {
+	vd := mustNewDiagram(t, 10)
+	want := len(vd.Sites)
+	got := vd.NumCells()
+	if got != want {
+		t.Errorf("Diagram.NumCells() = %d, want %d", got, want)
+	}
+}
+
+func TestDiagram_Cell(t *testing.T) {
+	vd := mustNewDiagram(t, 10)
+	tests := []struct {
+		name    string
+		index   int
+		wantErr bool
+	}{
+		{"valid index 0", 0, false},
+		{"valid index 5", 5, false},
+		{"valid index 9", 9, false},
+		{"negative index", -1, true},
+		{"out of range", 10, true},
+		{"large negative", -100, true},
+		{"large positive", 100, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, err := vd.Cell(tt.index)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Diagram.Cell(%d) error = %v, wantErr %v", tt.index, err, tt.wantErr)
+			}
+
+			want := Cell{tt.index, vd}
+			if diff := cmp.Diff(want, c, cmp.AllowUnexported(Cell{})); err == nil && diff != "" {
+				t.Errorf("Diagram.Cell(%d) mismatch (-want +got):\n%s", tt.index, diff)
+			}
+		})
 	}
 }
 
