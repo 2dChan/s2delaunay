@@ -24,12 +24,12 @@ type Diagram struct {
 	CellOffsets   []int
 }
 
-func (vd *Diagram) NumCells() int {
-	return len(vd.Sites)
+func (d *Diagram) NumCells() int {
+	return len(d.Sites)
 }
 
-func (vd *Diagram) Cell(i int) Cell {
-	return Cell{idx: i, vd: vd}
+func (d *Diagram) Cell(i int) Cell {
+	return Cell{idx: i, d: d}
 }
 
 func NewDiagram(sites s2.PointVector, eps float64) (*Diagram, error) {
@@ -44,7 +44,7 @@ func NewDiagram(sites s2.PointVector, eps float64) (*Diagram, error) {
 
 	numTriangles := len(dt.Triangles)
 	numNeighbors := len(dt.IncidentTriangleIndices)
-	vd := &Diagram{
+	d := &Diagram{
 		Sites:         dt.Vertices,
 		Vertices:      make(s2.PointVector, numTriangles),
 		CellVertices:  dt.IncidentTriangleIndices,
@@ -54,23 +54,23 @@ func NewDiagram(sites s2.PointVector, eps float64) (*Diagram, error) {
 
 	for i := range numTriangles {
 		p0, p1, p2 := dt.TriangleVertices(i)
-		vd.Vertices[i] = s2.Point{Vector: triangleCircumcenter(p0, p1, p2).Normalize()}
+		d.Vertices[i] = s2.Point{Vector: triangleCircumcenter(p0, p1, p2).Normalize()}
 	}
 
 	for vIdx := range dt.Vertices {
 		offset := dt.IncidentTriangleOffsets[vIdx]
 		it := dt.IncidentTriangles(vIdx)
 		for i, tIdx := range it {
-			vd.CellNeighbors[offset+i] = s2delaunay.NextVertex(dt.Triangles[tIdx], vIdx)
+			d.CellNeighbors[offset+i] = s2delaunay.NextVertex(dt.Triangles[tIdx], vIdx)
 		}
 	}
 
-	return vd, nil
+	return d, nil
 }
 
 type Cell struct {
 	idx int
-	vd  *Diagram
+	d   *Diagram
 }
 
 func (c Cell) SiteIndex() int {
@@ -78,41 +78,41 @@ func (c Cell) SiteIndex() int {
 }
 
 func (c Cell) Site() s2.Point {
-	return c.vd.Sites[c.idx]
+	return c.d.Sites[c.idx]
 }
 
 func (c Cell) NumVertices() int {
-	return c.vd.CellOffsets[c.idx+1] - c.vd.CellOffsets[c.idx]
+	return c.d.CellOffsets[c.idx+1] - c.d.CellOffsets[c.idx]
 }
 
 func (c Cell) VertexIndices() []int {
-	return c.vd.CellVertices[c.vd.CellOffsets[c.idx]:c.vd.CellOffsets[c.idx+1]]
+	return c.d.CellVertices[c.d.CellOffsets[c.idx]:c.d.CellOffsets[c.idx+1]]
 }
 
 func (c Cell) Vertex(i int) s2.Point {
-	start := c.vd.CellOffsets[c.idx]
-	end := c.vd.CellOffsets[c.idx+1]
+	start := c.d.CellOffsets[c.idx]
+	end := c.d.CellOffsets[c.idx+1]
 	if i < 0 || i > end-start {
 		panic("Vertex: index out of range")
 	}
-	return c.vd.Vertices[c.vd.CellVertices[start+i]]
+	return c.d.Vertices[c.d.CellVertices[start+i]]
 }
 
 func (c Cell) NumNeighbors() int {
-	return c.vd.CellOffsets[c.idx+1] - c.vd.CellOffsets[c.idx]
+	return c.d.CellOffsets[c.idx+1] - c.d.CellOffsets[c.idx]
 }
 
 func (c Cell) NeighborIndices() []int {
-	return c.vd.CellNeighbors[c.vd.CellOffsets[c.idx]:c.vd.CellOffsets[c.idx+1]]
+	return c.d.CellNeighbors[c.d.CellOffsets[c.idx]:c.d.CellOffsets[c.idx+1]]
 }
 
 func (c Cell) Neighbor(i int) Cell {
-	start := c.vd.CellOffsets[c.idx]
-	end := c.vd.CellOffsets[c.idx+1]
+	start := c.d.CellOffsets[c.idx]
+	end := c.d.CellOffsets[c.idx+1]
 	if i < 0 || i > end-start {
 		panic("Neighbor: index out of range")
 	}
-	return c.vd.Cell(c.vd.CellNeighbors[start+i])
+	return c.d.Cell(c.d.CellNeighbors[start+i])
 }
 
 func triangleCircumcenter(p1, p2, p3 s2.Point) s2.Point {

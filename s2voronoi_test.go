@@ -169,7 +169,7 @@ func TestCell_NumVertices(t *testing.T) {
 	vd := mustNewDiagram(t, 100)
 	for i := range vd.Sites {
 		c := vd.Cell(i)
-		want := vd.CellOffsets[i+1] - c.vd.CellOffsets[i]
+		want := vd.CellOffsets[i+1] - vd.CellOffsets[i]
 		if got := c.NumVertices(); got != want {
 			t.Errorf("c.NumVertices() = %v, want %v", got, want)
 		}
