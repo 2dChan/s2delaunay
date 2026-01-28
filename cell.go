@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Andrey Kriulin
+// Licensed under the MIT License.
+// See the LICENSE file in the project root for full license text.
+
 // Package s2voronoi implements Voronoi diagrams on the S2 sphere, built on Delaunay triangulation.
 
 package s2voronoi
