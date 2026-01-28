@@ -4,7 +4,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/2dChan/s2voronoi)](https://goreportcard.com/report/github.com/2dChan/s2voronoi)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/2dChan/s2voronoi)](https://pkg.go.dev/github.com/2dChan/s2voronoi)
 
-A Go library for computing Voronoi diagrams on the S2 sphere using Delaunay triangulation, with seamless integration with the golang/geo S2 library (utilizing S2 types).
+A Go library for computing Voronoi Diagrams on the S2 sphere using Delaunay Triangulation, with
+seamless integration with the golang/geo S2 library (utilizing S2 types).
 
 ## Installation
 
@@ -16,7 +17,7 @@ go get github.com/2dChan/s2voronoi
 
 ## Quick Start
 
-Import the library and create a Voronoi diagram from points on the sphere:
+Import the library and create a Voronoi Diagram from points on the sphere:
 
 ```go
 package main
@@ -49,8 +50,10 @@ func main() {
 
 See examples for detailed usage:
 
-- **Basic Diagram Generation**: [s2voronoi](examples/s2voronoi/main.go) - Generates a Voronoi diagram and exports to SVG.
-- **Delaunay Triangulation**: [s2delaunay](examples/s2delaunay/main.go) - Generates a Delaunay Triangulation and exports to SVG.
+- **Basic Diagram Generation**: [s2voronoi](examples/s2voronoi/main.go) - Generates a Voronoi
+  Diagram and exports to SVG.
+- **Delaunay Triangulation**: [s2delaunay](examples/s2delaunay/main.go) - Generates a Delaunay
+  Triangulation and exports to SVG.
 
 Run an example:
 
